@@ -45,7 +45,7 @@ library(tidyverse)
 
 For this tutorial, we will be using the `nycflights13` data. Most likely, you will need to install it before loading it into your session. 
 
-```{r eval = FALSE}
+```{r eval = FALSE, message = FALSE, warning=FALSE}
 # install.packages("nycflights13")
 library(nycflights13)
 ```
@@ -88,11 +88,20 @@ head(as.data.frame(flights))
 
 To convert a data frame to a tibble, use `as_tibble()`. 
 
+As a general rule, I almost always use the `names()` function when I'm looking at a new data set. This helps me get an idea of the data structure, and if the variable names are meaningful, can help me understand what types of questions I can ask, and how I may be able to answer them.
+
+```{r}
+names(flights)
+```
+
+These variables should be relatively self-explanatory, but you can run `?flights` for more information. 
+
 ## Single table verbs
 
 dplyr aims to provide a function for each basic verb of data manipulation:
 
-* Pick observations based on their values: `filter()` 
+* Pick observations based on their values: `filter()`
+* pick observations based on their row number `slice()`
 * Reorder the rows: `arrange()`
 * Pick variables based on their names: `select()` 
 * Add new variables using functions on existing variables: `mutate()` 
@@ -141,6 +150,34 @@ filter(flights, month == 1 | month == 2)
 filter(flights, month == 1 | month == 2 & distance > 1000 | distance < 500)
 ```
 
+Sometimes you want to see all of the data that do *not* meet a criteria. For example, maybe you don't want to know what flights left in July. You could use a combination of arguments within `filter()` such as: `month < 7 | month > 7`, or you could use the logical negation command `!=`. This command can be read as "not equal to". 
+
+```{r}
+# month less than "OR" greater than 7
+not_july_1 <- filter(flights, month < 7 | month >7)
+# month "not equal to" 7
+not_july_2 <- filter(flights, month != 7)
+# are these to objects the same?
+identical(not_july_1, not_july_2)
+# yes
+```
+
+Both lines of code above give the same result, but the second line is simpler to write, and you don't have to remember if you're supposed to use an "AND" (`&`) or an "OR" (`|`) command. 
+
+It is also often useful to see all of the values that occur within a variable column. For example, what are all of the airport origins in this data set?
+
+Here, I will use the base R function `unique()` to see all of the values in the variable "origin". To select just that variable, I will use the `$` subsetting function. 
+```{r}
+unique(flights$origin)
+```
+
+This data contains all of the flights leaving New York City, and the codes above refer to Newark, LaGuardia, and JFK, respectively. 
+
+
+### exercises
+1. Filter out all of the flights that departed in December. 
+2. What are all of the carriers in this data set? Choose one and filter out all of the flights for that carrier. 
+3. Filter out all of the flights that did *not* depart on the 13th day of any month.  
 
 ## Arrange rows with `arrange()`
 
@@ -150,6 +187,7 @@ filter(flights, month == 1 | month == 2 & distance > 1000 | distance < 500)
 ```{r}
 # arrange by sched_dep_time
 arrange(flights, sched_dep_time)
+
 # arrange by sched_dep_time, then dep_delay
 arrange(flights, sched_dep_time, dep_delay)
 
@@ -167,19 +205,24 @@ arrange(flights, desc(sched_dep_time), dep_delay)
 
 ```{r, eval = FALSE}
 flights[order(flights$sched_dep_time), ]
-flights[order(flights$sched_dep_time, decreasing = TRUE, flights$dep_delay), ]
+flights[order(flights$sched_dep_time, decreasing = TRUE, flights$dep_delay),]
 ```
 
+### exercises
+1. Arrange the flights in order of flight distance. 
+2. Arrange the flights in descending order of month (12 --> 1), and increasing order of day (1 --> 31). 
 
 ## Select columns with `select()`
 
-Datasets generally contain numerous columns, but oftentimes you are only interested in a few for a given analysis. `select()` allows you to focus on a useful subset of your data while dropping un-needed columns:
+Data sets generally contain numerous columns, but oftentimes you are only interested in a few for a given analysis. `select()` allows you to focus on a useful subset of your data while dropping un-needed columns:
 
 ```{r}
 # Select columns by name
 select(flights, month, day, carrier)
+
 # Select all columns between day and arr_time (inclusive)
 select(flights, day:arr_time)
+
 # Select all columns except those from year to day (inclusive)
 select(flights, -(year:day))
 ```
@@ -188,35 +231,56 @@ This function works similarly to the `select` argument in `base::subset()`. The 
 
 There are a number of helper functions you can use within `select()`, like `starts_with()`, `ends_with()`, `matches()` and `contains()`. These let you quickly match larger blocks of variables that meet some criterion. See `?select` for more details.
 
+The order you write the arguments in `select()` are retained in the output. This can be helpful if you want to quickly compare the values in two columns which do not normally appear next to each other. 
+
+``` {r}
+select(flights, air_time, dep_time, arr_time)
+```
+
+### exercises
+1. Select the hour and minute columns. 
+2. Select the dest, carrier, and arr_time variables, in that order. 
 
 ## Add new columns with `mutate()`
 
 Data analysis often requires the creation of new variable columns based on values within your dataset. The `mutate()` function allows you to do this:
 
 ```{r}
+# make two new columns, "gain" and "speed"
 d2 <- mutate(flights,
-  gain = arr_delay - dep_delay,
-  speed = distance / air_time * 60)
-select(d2, gain, arr_delay, dep_delay, speed, distance, air_time)
+  gain = arr_delay - dep_delay)
+
+# select new columns in d2, and columns used to calculate them
+select(d2, gain, arr_delay, dep_delay)
 ```
 
 `dplyr::mutate()` works similarly to `base::transform()`. The key difference between `mutate()` and `transform()` is that mutate allows you to refer to columns that you've just created:
 
 ```{r}
 d3 <- mutate(flights,
+  # calculate "gain" column
   gain = arr_delay - dep_delay,
+  # use "gain" column in next calculation
   gain_per_hour = gain / (air_time / 60)
 )
 select(d3, gain, gain_per_hour)
 ```
+
 Whereas `transform` will throw an error:
 ```{r, eval = FALSE}
 transform(flights,
-  gain = arr_delay - delay,
+  gain = arr_delay - dep_delay,
   gain_per_hour = gain / (air_time / 60)
 )
 #> Error in eval(substitute(list(...)), `_data`, parent.frame()) : object 'delay' not found
 ```
+
+### exercises
+
+1. Calculate the average speed per flight, in units of miles per minute. Reminder, speed = distance / time, and in this data, air_time is in minutes.
+2. Do the same as above, but this time report the speed in miles per hour. 
+3. Calculate the departure delay (i.e. `calc = dep_time - sched_dep_time`) and see if it is equal to the `dep_delay` column provided. Hint, to get a `TRUE/FASLE` value, use `calc_equal = calc == dep_delay`. 
+
 
 ## Summarise values with `summarise()`
 
@@ -260,7 +324,10 @@ summarise(flights,
           mean.delay = mean(dep_delay, na.rm = TRUE))
 ```
 
-We will return to the `summarize()` verb below.  
+### Exercises 
+1. What is the mean air_time in this data?
+2. What is the minimum and maximum flight distance?
+3. What is the mean and standard deviation of arr_delay?
 
 
 # Grouped operations
@@ -281,23 +348,33 @@ summarize(carrier_group,
           range_delay = range(dep_delay, na.rm = TRUE),
           mean_delay = mean(dep_delay, na.rm = TRUE))
 ```
-To illustrate the power of `dplyr`, here is a more complex data sumarization. The entire dataset is **grouped** into carrier and individual planes. A **new column** for air speed is added (using `mutate()`), and it is then **summarized** by counting the number of flights (`count = n()`) and computing the average speed (`mean.speed = mean(speed, na.rm = TRUE)`) and arrival delay (`delay = mean(arr_dellay, na.rm = TRUE)`). The results are then displayed using ggplot.
+
+To illustrate the power of `dplyr`, here is a more complex data summarization. 
+
+1. First, we **filter** out the flights that were canceled. In this data, canceled flights have `dep_time = NA`. The command we will use is: `!is.na(dep_time)`. You can read this as "all of the flights that *do not* have an `NA` value in the `dep_time` variable. 
+2. The entire data set is **grouped** into carrier and individual planes. 
+3. A **new column** for air speed is added (using `mutate()`). 
+4. It is then **summarized** by counting the number of flights (`count = n()`) and computing the average speed (`mean.speed = mean(speed, na.rm = TRUE)`) and arrival delay (`delay = mean(arr_dellay, na.rm = TRUE)`). 
+5. We will filter out results to make the display (below) nicer. 
+6. The results are then displayed using ggplot (after filtering to only include )
 
 ```{r, warning = FALSE, message = FALSE, fig.width = 6}
 #filter out canceled flights
 not_cancelled <- filter(flights, !is.na(dep_time))
 by_carrier <- group_by(not_cancelled, carrier, tailnum)
 air_speed <- mutate(by_carrier, speed = distance / air_time * 60)
-delay <- summarise(air_speed,
+speed_summary <- summarise(air_speed,
   count = n(),
   distance = mean(distance, na.rm = TRUE),
   speed = mean(speed, na.rm = TRUE))
-delay <- filter(delay, count > 30)
-ggplot(delay, aes(distance, speed)) +
+
+speed_summary <- filter(speed_summary, count > 100)
+
+ggplot(speed_summary, aes(distance, speed)) +
   geom_point(aes(color = carrier, size = count), alpha = 0.5) +
   theme_bw()
 ```
-Not surprisingly, flights that travel a shorter distance do not reach their maximal cruising speed. 
+Not surprisingly, flights that travel a shorter distance do not reach their maximal cruising speed. The difference in speed between different carriers (colored dots) may be reflecitive of different plane models or operation procedures. 
 
 
 ## Chaining
@@ -395,6 +472,7 @@ flights %>%
   arrange(dep_delay)
 # note that negative values indicate an early arrival
 ```
+
 If you want to also know the destination:
 ```{r}
 flights %>% 
