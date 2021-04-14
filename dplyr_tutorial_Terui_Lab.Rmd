@@ -586,40 +586,48 @@ For all of the following exercises, try and write code to answer the question us
 
 # Two table verbs
 
-Oftentimes the data you need is not in only one dataset. For example, the above results showing which destinations have the largest average departure delay may be interesting, but who has all the carrier and airport abbreviations memorized?
+Oftentimes the data you need is not in only one data set. For example, the above results showing which destinations have the largest average departure delay may be interesting, but who has all the carrier and airport abbreviations memorized?
 
-The above result would be more useful to lay persons if it had more specfic information. For this we can use the two table verbs of `dplyr`. 
+The above result would be more useful to lay persons if it had more specific information. For this we can use the two table verbs of `dplyr`. 
 
-The `airports` and `airlines` datasets within the `nycflights13` data has some useful information. 
+The `airports` and `airlines` objects within the `nycflights13` data has some useful information. 
 
-```{r, echo=FALSE}
+```{r, echo=TRUE}
 head(airlines)
 head(airports)
 ```
+
+### Exercise
+
+1. What columns can you use to join all of these data objects? Hint: call the `names()` function to each of the three objects: `flights`, `airports`, and `airlines`. 
+2. **Advanced** use the `dplyr::intersect()` call to see which common variables occur in two data objects. `intersect( names(object1), names(object2))` 
 
 There are a number of joining commands within `dplyr`, primarily differing in how they treat missing data. 
 
 * Join rows from `b` matching to `a`, keeping all rows from `a`: `left_join(a, b, by = "x1")`
 * Join rows from `a` matching to `b`, keeping all rows from `b`: `right_join(a, b, by = "x1")`
 * Join data, only keeping rows in `a` and `b`: `inner_join(a, b, by = "x1")`
-* Join data, keep all rows in both datasets: `full_join(a, b, by = "x1")`
+* Join data, keep all rows in both data sets: `full_join(a, b, by = "x1")`
 
-The Rstudio data wrangling cheat sheet has very useful diagrams explaining this visually. 
+The Rstudio data wrangling cheat sheet has very useful diagrams explaining this visually. Second page of this cheat sheet: <https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf> 
+
+If both data objects have a column with the same name, only one argument in the `by = ...` is needed. However, you can join two objects with different column names by calling them specifically: `left_join(object1, object2, by = c("column_in_1" = "column_in_2"))`
 
 All of these can be accomplished with using arguments within the `base::merge()` function, but as noted previously, one of the core features of dplyr is to have "small" functions that do one thing well. 
 
-The most commonly used joining verb is `left_join` because it retains all rows in the `a` data set, whether they have a match in `b` or not. In the following, `rename(newname = oldname)` is used to change the column name to "airline"
+The most commonly used joining verb is `left_join` because it retains all rows in the `a` data set, whether they have a match in `b` or not. In the following, we will combine the `flights` and `airlines` objects. They both have the variable `"carrier"`, so only one argument is needed. 
 
 ```{r}
 flights2 <- left_join(flights, airlines, by = "carrier") %>%
+  # change column name to be more descriptive
   rename(airline = name)
 dim(flights) # 19 columns
 dim(flights2) # 20 columns
 ```
 
-We used the function `dplyr::rename()` to rename the `name` column to `airline`. This is so when we add the airport names there are not multiple columns with the same id. 
+We used the function `dplyr::rename(newname = oldname)` to change the `name` column to `airline`. This is so when we add the airport names there are not multiple columns with the same id. 
 
-The `airports` dataset has a lot of information, but we're really only interested in the airport names. We can combine single table and two table verbs to only join the airport name with the airport code.  
+The `airports` data set has a lot of information, but we're really only interested in the airport names. We can combine single table and two table verbs to only join the airport name with the airport code. This gets us the information that we need, without making the object too large and unwieldly.  
 
 ```{r}
 flights3 <- airports %>%
@@ -635,7 +643,7 @@ The reason we want it as the second argument is that `left_join()` keeps all of 
 An alternative to using the "." notation would have been to use `right_join()`:
 
 ```{r}
-flights3.b <- airports %>%
+flights3b <- airports %>%
   select(faa, name) %>%
   right_join(flights2, by = c("faa" = "dest")) %>%
   rename(dest.name = name)
@@ -666,6 +674,11 @@ flights4 %>%
   arrange(airline, desc(mean.delay))
 ```
 
+### Exercises
+
+1. Look at the `weather` object. Now, combine the `weather` and `flights` object without calling any column names: `left_join(flights, weather)`. What happened? How many / which columns did it join by? What do you think would happen if you called fewer column? i.e. `left_join(flights, weather, by = c("year", "month", "day", "origin"))`. Hint: what are the number of rows in each?
+
+2. Return a data frame that has the average arrival delay by destination airport, and include the airport's lat, lon, and tz. Hint: `flights` then `group_by()`, then `summarize()` (remember `na.rm = TRUE` !!!) then `join()` to `airports` then `select()` columns. 
 
 # Plug for "tidy" data 
 
@@ -677,17 +690,17 @@ So what is tidy data? For an in depth look, see the *Tidy Data* paper <http://ww
 
 Briefly, a tidy dataset is where all columns are a single variable, each observation is its own row, and each value has it's own cell. 
 
-However, many datasets are messy, and decidely not tidy. This may be due to how data was collected, the output readings of our instruments, the fact that's its easier to enter data in a certain way, etc. 
+However, many datasets are messy, and decidedly not tidy. This may be due to how data was collected, the output readings of our instruments, the fact that's its easier to enter data in a certain way, etc. 
 
-If possible, it is easiest to enter all of your data in a tidy format, foregoing any need to manipulate our data in R, or, god forbid, in Excel. However, if you're working with old datasets, or have to enter data in an un-tidy way, have no fear, as there's a package for that. 
+If possible, it is easiest to enter all of your data in a tidy format, foregoing any need to manipulate our data in R or excel. However, if you're working with old datasets, or have to enter data in an un-tidy way, have no fear, as there's a package for that. 
 
-The `tidyr` package was designed to turn messy data into tidy data, with surprisingly few commands (see the data wrangling cheat sheet we've been talking about). Unfortunately we don't have time to go into this now but there are a number of resources available for further reading and example datasets available online (see resources below).
+The `tidyr` package was designed to turn messy data into tidy data, with surprisingly few commands (see `?tidyr`, `browseVignettes("tidyr")` or <https://tidyr.tidyverse.org/> for more). Unfortunately we don't have time to go into this now but there are a number of resources available for further reading and example datasets available online (see resources below).
 
-One more quick plug for data formatting and manipulation in R, as opposed to Excel. One of the best utilities of R (or a similar language) is the ability to make your analysis completely reproducible. It may be easier now to just do your data formating in excel, but it is fraught with dangers. It's easy to change an equation in a cell, or reference the wrong cell, or accidentally copy a cell's equation instead of the value etc., and working backwards to find the error can be a literal nightmare. Also, changing your data's format in excel can be dangerous. You may have done it right the first time, but there's no paper trail, no breadcrumbs to follow backwards to find your error. Likewise, if you return to your data much later, it is amazingly easy to forgot how exactly you moved things around, or what values were calculated how. 
+One more quick plug for data formatting and manipulation in R, as opposed to Excel. One of the best utilities of R (or a similar language) is the ability to make your analysis completely reproducible. It may be easier now to just do your data formatting in excel, but it is fraught with dangers. It's easy to change an equation in a cell, or reference the wrong cell, or accidentally copy a cell's equation instead of the value etc., and working backwards to find the error can be a literal nightmare. Also, changing your data's format in excel can be dangerous. You may have done it right the first time, but there's no paper trail, no breadcrumbs to follow backwards to find your error. Likewise, if you return to your data much later, it is amazingly easy to forget how exactly you moved things around, or what values were calculated how. 
 
-However, doing all of this in R allows you to leave clear signposts for exactly what you did and the order you did it in. This also allows you to leave your raw data alone. I can't tell you how many times I've messed something up and had to start over with the raw data. But creating a data formatting script allows me to find where the mistake is, fix it, and then reimport the raw data, source the entire document `Ctr + Shift + S` and be on my merry way. This is also useful if you have numerous excel sheets that all need the same functions called on them (e.g. HOBO data logger output files). 
+However, doing all of this in R allows you to leave clear signposts for exactly what you did and the order you did it in. This also allows you to leave your raw data alone. I can't tell you how many times I've messed something up and had to start over with the raw data. But creating a data formatting script allows me to find where the mistake is, fix it, and then re-import the raw data, source the entire document `Ctr + Shift + S` and be on my merry way. This is also useful if you have numerous excel sheets that all need the same functions called on them (e.g. HOBO data logger output files). 
 
-This concludes the introdcution to the dplyr package. Hopefully it has given you a taste of the power and ease of using dplyr with tidy data, and provided you with enough resources to continue on and learn more if you need it. 
+This concludes the introduction to the dplyr package. Hopefully it has given you a taste of the power and ease of using dplyr with tidy data, and provided you with enough resources to continue on and learn more if you need it. 
 
 # Resources
 
