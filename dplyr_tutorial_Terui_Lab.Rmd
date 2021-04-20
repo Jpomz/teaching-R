@@ -289,7 +289,7 @@ The last verb is `summarise()`. This collapses a dataframe to a single value, ba
 ```{r}
 # mean departure delay
 summarise(flights,
-  delay = mean(air_time, na.rm = TRUE))
+  delay = mean(dep_delay, na.rm = TRUE))
 # shortest flight distance
 summarise(flights, min.dist = min(distance))
 ```
@@ -396,7 +396,7 @@ However this can lead to many problems. Giving objects appropriate names can be 
 
 Alternatively, if you don't want to save the intermediate results, you need to wrap the function calls inside each other:
 
-```{r warning = FALSE, message = FALSE, echo=FALSE, eval = FALSE}
+```{r warning = FALSE, message = FALSE, echo=TRUE, eval = FALSE}
 # calculate flights either whose arrival or departure were delayed > 30 minutes 
 filter(
   summarise(
@@ -552,7 +552,7 @@ flights %>%
   summarize(mean.delay = mean(dep_delay,na.rm = T), 
             count = n()) %>%
   arrange(carrier, desc(mean.delay)) %>%
-  write.csv("mean delay by carrier and dest.csv", row.names = F)
+  write.csv("mean_delay_by_carrier_and_dest.csv", row.names = F)
 
 # revisit our ggplot example above
 # pipe results into ggplot()
